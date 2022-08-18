@@ -551,18 +551,19 @@ export class JsonSchemaGenerator {
             if (comments.length) {
                 definition.description = comments
                     .map((comment) => {
-                      const newlineNormalizedComment = comment.text.replace(/\r\n/g, "\n");
+                        const newlineNormalizedComment = comment.text.replace(/\r\n/g, "\n");
 
-                      // If a comment contains a "{@link XYZ}" inline tag that could not be
-                      // resolved by the TS checker, then this comment will contain a trailing
-                      // whitespace that we need to remove.
-                      if (comment.kind === "linkText") {
-                        return newlineNormalizedComment.trim();
-                      }
+                        // If a comment contains a "{@link XYZ}" inline tag that could not be
+                        // resolved by the TS checker, then this comment will contain a trailing
+                        // whitespace that we need to remove.
+                        if (comment.kind === "linkText") {
+                            return newlineNormalizedComment.trim();
+                        }
 
-                      return newlineNormalizedComment;
+                        return newlineNormalizedComment;
                     })
-                    .join("").trim();
+                    .join("")
+                    .trim();
             }
         }
 
@@ -1408,9 +1409,24 @@ export class JsonSchemaGenerator {
         this.schemaOverrides.set(symbolName, schema);
     }
 
-    public getSchemaForSymbol(symbolName: string, includeReffedDefinitions: boolean = true): Definition {
-        if (!this.allSymbols[symbolName]) {
-            throw new Error(`type ${symbolName} not found`);
+    public getSchemaForSymbol(
+        symbol:
+            | string
+            | {
+                  symbol: ts.Symbol;
+                  type: ts.Type;
+              },
+        includeReffedDefinitions: boolean = true
+    ): Definition {
+        if (typeof symbol === "string" && !this.allSymbols[symbol]) {
+            throw new Error(`type ${symbol} not found`);
+        }
+
+        let symbolName = typeof symbol === "string" ? symbol : symbol.symbol.name;
+
+        if (typeof symbol !== "string") {
+            this.allSymbols[symbolName] = symbol.type;
+            this.userSymbols[symbolName] = symbol.symbol;
         }
 
         this.resetSchemaSpecificProperties();
@@ -1652,6 +1668,17 @@ export function generateSchema(
         // Use specific type as root object
         return generator.getSchemaForSymbol(fullTypeName);
     }
+}
+
+export function generateSchemaFromSymbol(program: ts.Program, symbol: ts.Symbol, type: ts.Type): Definition | null {
+    const generator = buildGenerator(program);
+
+    if (generator === null) {
+        return null;
+    }
+
+    // Use specific type as root object
+    return generator.getSchemaForSymbol({ symbol, type });
 }
 
 export function programFromConfig(configFileName: string, onlyIncludeFiles?: string[]): ts.Program {
