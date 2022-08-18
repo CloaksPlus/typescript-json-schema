@@ -1670,8 +1670,8 @@ export function generateSchema(
     }
 }
 
-export function generateSchemaFromSymbol(program: ts.Program, symbol: ts.Symbol, type: ts.Type): Definition | null {
-    const generator = buildGenerator(program);
+export function generateSchemaFromSymbol(program: ts.Program, symbol: ts.Symbol, type: ts.Type, args: PartialArgs = {},): Definition | null {
+    const generator = buildGenerator(program, args);
 
     if (generator === null) {
         return null;
